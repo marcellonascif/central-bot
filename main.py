@@ -1,22 +1,19 @@
-import discord
 import os
-
-ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
-
-class Client(discord.Client):
-    async def on_ready(self):
-        print(f'Logged on as {self.user}')
-
-    async def on_message(self, message):
-        print(f'Message from {message.author}: {message.content}')
-
-
+import discord
+from bot.client import Client
+import bot.commands as cmds
 
 if __name__ == '__main__':
-    print('Hello, World!')
+    ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
+    GUILD_ID = int(os.getenv("GUILD_ID"))
 
-    intents = discord.Intents.default()
+    intents = discord.Intents.all()
     intents.messages = True
 
-    client = Client(intents=intents)
+    client = Client(command_prefix="!", intents=intents, guild_id=GUILD_ID)
+
+    # Configurar comandos
+    cmds.setup_hello(client, client.guild_id)
+    cmds.setup_music(client, client.guild_id)
+
     client.run(ACCESS_TOKEN)
