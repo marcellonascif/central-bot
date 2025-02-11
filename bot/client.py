@@ -6,6 +6,7 @@ class Client(commands.Bot):
     def __init__(self, command_prefix: str, intents: discord.Intents, guild_id: int):
         super().__init__(command_prefix=command_prefix, intents=intents)
         self.guild_id = discord.Object(guild_id)
+        self.queue = []
 
     async def on_ready(self):
         try:
