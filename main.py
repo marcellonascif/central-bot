@@ -2,8 +2,10 @@ import os
 import discord
 from bot.client import Client
 import bot.commands as cmds
+from dotenv import load_dotenv
 
 if __name__ == '__main__':
+    load_dotenv()
     ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
     GUILD_ID = int(os.getenv("GUILD_ID"))
 
