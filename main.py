@@ -15,5 +15,6 @@ if __name__ == '__main__':
     # Configurar comandos
     cmds.setup_hello(client, client.guild_id)
     cmds.setup_music(client, client.guild_id)
+    cmds.setup_ping(client, client.guild_id)
 
     client.run(ACCESS_TOKEN)
