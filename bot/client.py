@@ -1,12 +1,13 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+from collections import deque
 
 class Client(commands.Bot):
     def __init__(self, command_prefix: str, intents: discord.Intents, guild_id: int):
         super().__init__(command_prefix=command_prefix, intents=intents)
         self.guild_id = discord.Object(guild_id)
-        self.queue = []
+        self.music_queue = deque()
 
     async def on_ready(self):
         try:
