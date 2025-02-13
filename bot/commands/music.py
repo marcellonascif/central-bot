@@ -4,7 +4,6 @@ from discord import app_commands
 from discord.errors import ClientException
 from collections import deque
 from yt_dlp import YoutubeDL
-import os
 
 def setup(client: discord.Client, guild_id: discord.Object):
 
@@ -42,7 +41,7 @@ def setup(client: discord.Client, guild_id: discord.Object):
             song = await loop.run_in_executor(None, search_youtube, input)
             if song:
                 print(song[0]["url"])
-
+                # ! Estamos fazendo essa operação muitas vezes (estudar possibilidade de guardar em atributo da classe)
                 voice_client = discord.utils.get(client.voice_clients, guild=interaction.guild)
                 voice_client.play(
                     discord.FFmpegPCMAudio(
@@ -56,6 +55,43 @@ def setup(client: discord.Client, guild_id: discord.Object):
 
         except Exception as e:
             print(f"An error occurred: {e}")
+
+
+    @client.tree.command(name="pause", description="Pauses the current song", guild=guild_id)
+    async def pause(interaction: discord.Interaction):
+
+        voice_client = discord.utils.get(client.voice_clients, guild=interaction.guild)
+        try:
+            voice_client.pause()
+            await interaction.response.send_message("A música foi pausada!")
+
+        except Exception as e:
+            await interaction.response.send_message("Não está tocando nenhuma música!")
+
+
+    @client.tree.command(name="resume", description="Resumes the current song", guild=guild_id)
+    async def resume(interaction: discord.Interaction):
+
+        voice_client = discord.utils.get(client.voice_clients, guild=interaction.guild)
+        try:
+            voice_client.resume()
+            await interaction.response.send_message("A música está tocando novamente!")
+
+        except Exception as e:
+            await interaction.response.send_message("Não está tocando nenhuma música!")
+
+
+    @client.tree.command(name="stop", description="Stops the current song", guild=guild_id)
+    async def stop(interaction: discord.Interaction):
+
+        voice_client = discord.utils.get(client.voice_clients, guild=interaction.guild)
+        try:
+            await voice_client.disconnect()
+            await interaction.response.send_message("A música foi parada!")
+
+        except Exception as e:
+            await interaction.response.send_message("Não está tocando nenhuma música!")
+
 
 def add_to_queue(client: discord.Client, input: str):
     client.music_queue.append(input)
