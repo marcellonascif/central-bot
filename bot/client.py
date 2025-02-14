@@ -3,10 +3,11 @@ from discord.ext import commands
 from discord import app_commands
 from collections import deque
 
-class Client(commands.Bot):
+class Client(discord.Client):
     def __init__(self, command_prefix: str, intents: discord.Intents, guild_id: int):
         super().__init__(command_prefix=command_prefix, intents=intents)
         self.guild_id = discord.Object(guild_id)
+        self.voice_client = None
         self.music_queue = deque()
 
     async def on_ready(self):

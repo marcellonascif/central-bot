@@ -17,8 +17,9 @@ def setup(client: discord.Client, guild_id: discord.Object):
 
         try:
             # Conectar ao canal de voz
-            voice_response = await interaction_channel.connect(self_deaf=True)
-            print("try")
+            client.voice_client = await interaction_channel.connect(self_deaf=True)
+            print("try to connect")
+
 
             add_to_queue(client, input)
             await interaction.response.send_message(f"Fila: {client.music_queue}")
@@ -27,7 +28,7 @@ def setup(client: discord.Client, guild_id: discord.Object):
         except ClientException as e:
             print("exception")
 
-            client_channel = discord.utils.get(client.voice_clients, guild=interaction.guild).channel
+            client_channel = client.voice_client.channel
 
             if client_channel != interaction_channel:
                 await interaction.response.send_message("Você precisa estar no mesmo canal de voz que eu!")
@@ -36,22 +37,23 @@ def setup(client: discord.Client, guild_id: discord.Object):
             add_to_queue(client, input)
             await interaction.response.send_message(f"Fila: {client.music_queue}")
 
+        # ! Verificar se esse loop para tocar a música faz sentido nesse contexto
+        # ! (acho que precisa criar uma função que roda durante todo o tempo e verifica se a fila esvaziou)
         try:
             loop = asyncio.get_event_loop()
             song = await loop.run_in_executor(None, search_youtube, input)
             if song:
-                print(song[0]["url"])
-                # ! Estamos fazendo essa operação muitas vezes (estudar possibilidade de guardar em atributo da classe)
-                voice_client = discord.utils.get(client.voice_clients, guild=interaction.guild)
-                voice_client.play(
+                print(song["url"])
+
+                client.voice_client.play(
                     discord.FFmpegPCMAudio(
-                        song[0]["url"],
+                        song["url"],
                         before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
                         options="-vn"
                     )
                 )
 
-                await interaction.followup.send(f"Playing {song[0]['title']}")
+                await interaction.followup.send(f"Playing {song['title']}")
 
         except Exception as e:
             print(f"An error occurred: {e}")
@@ -60,9 +62,8 @@ def setup(client: discord.Client, guild_id: discord.Object):
     @client.tree.command(name="pause", description="Pauses the current song", guild=guild_id)
     async def pause(interaction: discord.Interaction):
 
-        voice_client = discord.utils.get(client.voice_clients, guild=interaction.guild)
         try:
-            voice_client.pause()
+            client.voice_client.pause()
             await interaction.response.send_message("A música foi pausada!")
 
         except Exception as e:
@@ -72,9 +73,8 @@ def setup(client: discord.Client, guild_id: discord.Object):
     @client.tree.command(name="resume", description="Resumes the current song", guild=guild_id)
     async def resume(interaction: discord.Interaction):
 
-        voice_client = discord.utils.get(client.voice_clients, guild=interaction.guild)
         try:
-            voice_client.resume()
+            client.voice_client.resume()
             await interaction.response.send_message("A música está tocando novamente!")
 
         except Exception as e:
@@ -84,9 +84,9 @@ def setup(client: discord.Client, guild_id: discord.Object):
     @client.tree.command(name="stop", description="Stops the current song", guild=guild_id)
     async def stop(interaction: discord.Interaction):
 
-        voice_client = discord.utils.get(client.voice_clients, guild=interaction.guild)
         try:
-            await voice_client.disconnect()
+            await client.voice_client.disconnect()
+            client.voice_client = None
             await interaction.response.send_message("A música foi parada!")
 
         except Exception as e:
@@ -109,11 +109,11 @@ def search_youtube(query: str, max_results: int = 1):
     with YoutubeDL(ydl_opts) as ydl:
         results = ydl.extract_info(search_query, download=False)
 
-    return [
-        {
-            "title": entry.get("title"),
-            "url": entry.get("url"),
-            "duration": entry.get("duration"),
-        }
-        for entry in results["entries"]
-    ]
+
+    # Só retorna o primeiro elemento da função atualmente. Para mudar precisa atualizar essa parte
+    first_entry = results["entries"][0]
+    return {
+        "title": first_entry.get("title"),
+        "url": first_entry.get("url"),
+        "duration": first_entry.get("duration"),
+    }
