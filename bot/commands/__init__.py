@@ -1,5 +1,3 @@
-# bot/commands/__init__.py
-
 from .hello import setup as setup_hello
 from .music import setup as setup_music
 from .ping import setup as setup_ping
