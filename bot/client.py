@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 from collections import deque
 
-class Client(discord.Client):
+class Client(commands.Bot):
     def __init__(self, command_prefix: str, intents: discord.Intents, guild_id: int):
         super().__init__(command_prefix=command_prefix, intents=intents)
         self.guild_id = discord.Object(guild_id)
@@ -21,3 +21,7 @@ class Client(discord.Client):
 
     async def on_message(self, message):
         print(f'Message from {message.author}: {message.content}')
+
+    def add_to_queue(self, input: str):
+        self.music_queue.append(input)
+        print(f"Added {input} to the queue.")

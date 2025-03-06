@@ -7,8 +7,8 @@ from yt_dlp import YoutubeDL
 
 def setup(client: discord.Client, guild_id: discord.Object):
 
-    @client.tree.command(name="play", description="Plays a song", guild=guild_id)
-    async def play(interaction: discord.Interaction, *, input: str):
+    @client.tree.command(name="play", description="Play a song", guild=guild_id)
+    async def play(interaction: discord.Interaction, input: str):
 
         interaction_channel = interaction.user.voice.channel
         if not interaction_channel:
@@ -21,7 +21,7 @@ def setup(client: discord.Client, guild_id: discord.Object):
             print("try to connect")
 
 
-            add_to_queue(client, input)
+            client.add_to_queue(input)
             await interaction.response.send_message(f"Fila: {client.music_queue}")
 
 
@@ -34,32 +34,32 @@ def setup(client: discord.Client, guild_id: discord.Object):
                 await interaction.response.send_message("Você precisa estar no mesmo canal de voz que eu!")
                 return
 
-            add_to_queue(client, input)
+            client.add_to_queue(input)
             await interaction.response.send_message(f"Fila: {client.music_queue}")
 
-        # ! Verificar se esse loop para tocar a música faz sentido nesse contexto
-        # ! (acho que precisa criar uma função que roda durante todo o tempo e verifica se a fila esvaziou)
-        try:
-            loop = asyncio.get_event_loop()
-            song = await loop.run_in_executor(None, search_youtube, input)
-            if song:
-                print(song["url"])
+        if not client.voice_client.is_playing():
+            await play_next(interaction)
 
-                client.voice_client.play(
-                    discord.FFmpegPCMAudio(
+    async def play_next(interaction: discord.Interaction):
+        if client.music_queue and client.voice_client:
+                input = client.music_queue.popleft()
+                song = await asyncio.to_thread(search_youtube, input)
+
+                player = discord.FFmpegPCMAudio(
                         song["url"],
                         before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
                         options="-vn"
                     )
+
+                client.voice_client.play(
+                    player,
+                    after=lambda e: asyncio.run_coroutine_threadsafe(play_next(interaction), client.loop)
                 )
 
                 await interaction.followup.send(f"Playing {song['title']}")
 
-        except Exception as e:
-            print(f"An error occurred: {e}")
 
-
-    @client.tree.command(name="pause", description="Pauses the current song", guild=guild_id)
+    @client.tree.command(name="pause", description="Pause the current song", guild=guild_id)
     async def pause(interaction: discord.Interaction):
 
         try:
@@ -70,7 +70,7 @@ def setup(client: discord.Client, guild_id: discord.Object):
             await interaction.response.send_message("Não está tocando nenhuma música!")
 
 
-    @client.tree.command(name="resume", description="Resumes the current song", guild=guild_id)
+    @client.tree.command(name="resume", description="Resume the current song", guild=guild_id)
     async def resume(interaction: discord.Interaction):
 
         try:
@@ -81,21 +81,17 @@ def setup(client: discord.Client, guild_id: discord.Object):
             await interaction.response.send_message("Não está tocando nenhuma música!")
 
 
-    @client.tree.command(name="stop", description="Stops the current song", guild=guild_id)
+    @client.tree.command(name="stop", description="Stop the current song", guild=guild_id)
     async def stop(interaction: discord.Interaction):
 
         try:
             await client.voice_client.disconnect()
             client.voice_client = None
+            client.music_queue.clear()
             await interaction.response.send_message("A música foi parada!")
 
         except Exception as e:
             await interaction.response.send_message("Não está tocando nenhuma música!")
-
-
-def add_to_queue(client: discord.Client, input: str):
-    client.music_queue.append(input)
-    print(f"Added {input} to the queue.")
 
 
 def search_youtube(query: str, max_results: int = 1):
