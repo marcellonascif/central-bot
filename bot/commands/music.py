@@ -60,8 +60,8 @@ def setup(client: discord.Client, guild_id: discord.Object):
 
                 player = discord.FFmpegPCMAudio(
                         song["url"],
-                        before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -loglevel debug",
-                        options="-vn",
+                        before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+                        options="-vn"
                     )
 
                 client.voice_client.play(
@@ -112,6 +112,9 @@ def search_youtube(query: str, max_results: int = 1):
         "format": "bestaudio/best",
         "quiet": True,
         "noplaylist": True,
+        "extract_flat": False,
+        "skip_download": True,
+        "youtube_include_dash_manifest": False,
     }
 
     search_query = f"ytsearch{max_results}:{query}"
