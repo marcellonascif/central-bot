@@ -2,8 +2,8 @@ import asyncio
 import discord
 from discord import app_commands
 from discord.errors import ClientException
-from collections import deque
 from yt_dlp import YoutubeDL
+import time
 
 def setup(client: discord.Client, guild_id: discord.Object):
 
@@ -15,40 +15,53 @@ def setup(client: discord.Client, guild_id: discord.Object):
             await interaction.response.send_message("Você precisa estar em um canal de voz!")
             return
 
+        await interaction.response.defer()
+
         try:
             # Conectar ao canal de voz
             client.voice_client = await interaction_channel.connect(self_deaf=True)
-            print("try to connect")
 
+            # deixa a troca muito mais rapida em compensacao
+            # ! isso guarda o link de uma vez mas trava o bot para procurar a música
 
-            client.add_to_queue(input)
-            await interaction.response.send_message(f"Fila: {client.music_queue}")
+            start_time = time.time()
+            song = await asyncio.to_thread(search_youtube, input)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            print(f"Search took {elapsed_time:.2f} seconds")
+
+            client.add_to_queue(song)
+            await interaction.followup.send(f"{song["title"]} foi adicionado à fila!")
 
 
         except ClientException as e:
-            print("exception")
-
             client_channel = client.voice_client.channel
 
             if client_channel != interaction_channel:
                 await interaction.response.send_message("Você precisa estar no mesmo canal de voz que eu!")
                 return
 
-            client.add_to_queue(input)
-            await interaction.response.send_message(f"Fila: {client.music_queue}")
+            # ! isso guarda o link de uma vez mas trava o bot para procurar a música
+            start_time = time.time()
+            song = await asyncio.to_thread(search_youtube, input)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            print(f"Search took {elapsed_time:.2f} seconds")
+            client.add_to_queue(song)
+            await interaction.followup.send(f"{song["title"]} foi adicionado à fila!")
 
         if not client.voice_client.is_playing():
             await play_next(interaction)
 
     async def play_next(interaction: discord.Interaction):
         if client.music_queue and client.voice_client:
-                input = client.music_queue.popleft()
-                song = await asyncio.to_thread(search_youtube, input)
+                song = client.music_queue.popleft()
+                # song = await asyncio.to_thread(search_youtube, input)
 
                 player = discord.FFmpegPCMAudio(
                         song["url"],
-                        before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-                        options="-vn"
+                        before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -loglevel debug",
+                        options="-vn",
                     )
 
                 client.voice_client.play(

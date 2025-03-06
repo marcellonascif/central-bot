@@ -24,4 +24,3 @@ class Client(commands.Bot):
 
     def add_to_queue(self, input: str):
         self.music_queue.append(input)
-        print(f"Added {input} to the queue.")
