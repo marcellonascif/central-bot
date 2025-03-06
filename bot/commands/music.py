@@ -21,10 +21,9 @@ def setup(client: discord.Client, guild_id: discord.Object):
             # Conectar ao canal de voz
             client.voice_client = await interaction_channel.connect(self_deaf=True)
 
+            start_time = time.time()
             # deixa a troca muito mais rapida em compensacao
             # ! isso guarda o link de uma vez mas trava o bot para procurar a música
-
-            start_time = time.time()
             song = await asyncio.to_thread(search_youtube, input)
             end_time = time.time()
             elapsed_time = end_time - start_time
@@ -41,7 +40,6 @@ def setup(client: discord.Client, guild_id: discord.Object):
                 await interaction.response.send_message("Você precisa estar no mesmo canal de voz que eu!")
                 return
 
-            # ! isso guarda o link de uma vez mas trava o bot para procurar a música
             start_time = time.time()
             song = await asyncio.to_thread(search_youtube, input)
             end_time = time.time()
@@ -56,7 +54,6 @@ def setup(client: discord.Client, guild_id: discord.Object):
     async def play_next(interaction: discord.Interaction):
         if client.music_queue and client.voice_client:
                 song = client.music_queue.popleft()
-                # song = await asyncio.to_thread(search_youtube, input)
 
                 player = discord.FFmpegPCMAudio(
                         song["url"],
@@ -64,12 +61,27 @@ def setup(client: discord.Client, guild_id: discord.Object):
                         options="-vn"
                     )
 
+                player_pid = player._process.pid
+                print(f"Player PID: {player_pid}")
+
                 client.voice_client.play(
                     player,
                     after=lambda e: asyncio.run_coroutine_threadsafe(play_next(interaction), client.loop)
                 )
 
-                await interaction.followup.send(f"Playing {song['title']}")
+                await interaction.channel.send(f"Tocando agora: {song['title']}")
+        else:
+            await interaction.channel.send("Fila de músicas vazia!")
+
+
+    @client.tree.command(name="skip", description="Skip the current song", guild=guild_id)
+    async def skip(interaction: discord.Interaction):
+        if not client.voice_client or not client.voice_client.is_playing():
+            await interaction.response.send_message("Não está tocando nenhuma música!")
+            return
+
+        client.voice_client.stop()
+        await interaction.response.send_message("A música foi pulada!")
 
 
     @client.tree.command(name="pause", description="Pause the current song", guild=guild_id)
